@@ -205,19 +205,6 @@ The implementation includes built-in validation:
 3. **NumPy/Numba**: Ensure proper installation for optimized performance
 4. **Memory Management**: Monitor memory usage for large state spaces
 
-## 📚 References
-
-- LaTeX document: `latex/pseudo_code.tex` - Complete mathematical specification
-- Original research paper: [Multi-Asset Optimal Stopping with Budget Constraints]
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
