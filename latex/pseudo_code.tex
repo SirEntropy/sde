@@ -1,0 +1,124 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm,algorithmic}
+\usepackage[noend]{algpseudocode}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{enumitem}
+\setlist{topsep=2pt,itemsep=1pt,parsep=1pt}
+\usepackage{float} % For better float control
+
+\title{Multi-Asset Optimal Stopping with Budget Constraints}
+\author{Lianghao Chen}
+\date{\today}
+
+\begin{document}
+\maketitle
+\vspace{-1cm}
+
+\section{Problem Formulation}
+
+Explore if HJB can be used as a constrained optimization problem at each
+time step where we can simultaneously decide position sizes and optimal exit times for
+each strategy
+
+Consider $N$ risky assets with price dynamics:
+\begin{equation}
+dS_i(t) = \mu_i S_i(t) dt + \sigma_i S_i(t) dW_i(t), \quad i = 1, \ldots, N
+\end{equation}
+where $\text{Corr}(dW_i, dW_j) = \rho_{ij}dt$.
+
+\textbf{State Variables:}
+\begin{itemize}
+\item Wealth: $X(t) \in \mathbb{R}_+$
+\item Asset prices: $\mathbf{S}(t) = (S_1(t), \ldots, S_N(t))$
+\item Active set: $\mathcal{I}(t) \subseteq \{1, \ldots, N\}$ (assets not yet stopped)
+\end{itemize}
+
+\textbf{Control Variables:}
+\begin{itemize}
+\item Portfolio weights: $\boldsymbol{\pi}(t) = (\pi_1(t), \ldots, \pi_N(t))$ with $\sum_{i=1}^N \pi_i(t) \leq 1$
+\item Stopping times: $\tau_i$ for each asset $i$
+\end{itemize}
+
+\textbf{Objective:} Maximize expected utility
+\begin{equation}
+V(0, x_0, \mathbf{s}_0, \{1,\ldots,N\}) = \sup_{\boldsymbol{\pi}, \boldsymbol{\tau}} \mathbb{E}\left[\sum_{i=1}^N G_i(X(\tau_i), S_i(\tau_i)) \mathbf{1}_{\{\tau_i \leq T\}}\right]
+\end{equation}
+
+\section{HJB Equation and Decomposition}
+
+The value function $V(t, x, \mathbf{s}, \mathcal{I})$ satisfies:
+\begin{equation}
+\frac{\partial V}{\partial t} + \sup_{\boldsymbol{\pi} \in \Pi(\mathcal{I})} \mathcal{L}^{\boldsymbol{\pi}} V + \max_{i \in \mathcal{I}} \left[G_i(x, s_i) - V(t, x, \mathbf{s}, \mathcal{I} \setminus \{i\})\right]^+ = 0
+\end{equation}
+where $\mathcal{L}^{\boldsymbol{\pi}}$ is the infinitesimal generator under portfolio $\boldsymbol{\pi}$.
+
+\section{Computational Algorithm}
+
+\begin{algorithm}[H] % [H] forces placement here
+\caption{Backward Induction with Policy Iteration}
+\begin{algorithmic}[1]
+\STATE \textbf{Initialize:}
+\STATE \quad Grid: $\text{time\_grid} = \text{linspace}(0, T, M_t)$
+\STATE \quad State space: $\text{wealth\_grid} \times \text{price\_grid}^N$
+\STATE \quad Terminal condition: $V(T, x, s, \mathcal{I}) = 0$ for all states
+\STATE
+\FOR{$t = T-\Delta t, T-2\Delta t, \ldots, 0$}
+    \FOR{each active set $\mathcal{I} \subseteq \{1,\ldots,N\}$}
+        \FOR{each state $(x, \mathbf{s})$ in state\_grid}
+            \STATE
+            \STATE \textbf{Step 1: Solve portfolio optimization}
+            \STATE $\boldsymbol{\pi}^* \leftarrow$ OPTIMIZE\_PORTFOLIO$(x, \mathbf{s}, \mathcal{I}, V_{\text{next}})$
+            \STATE \quad \textit{Using: scipy.optimize.minimize with constraints}
+            \STATE
+            \STATE \textbf{Step 2: Compute continuation value}
+            \STATE $V_{\text{cont}} \leftarrow$ COMPUTE\_CONTINUATION$(x, \mathbf{s}, \mathcal{I}, \boldsymbol{\pi}^*, V_{\text{next}})$
+            \STATE \quad \textit{Using: finite differences for derivatives}
+            \STATE
+            \STATE \textbf{Step 3: Compute stopping values}
+            \FOR{$i \in \mathcal{I}$}
+                \STATE $V_{\text{stop}}[i] \leftarrow G_i(x, s_i) + V(t, x, \mathbf{s}, \mathcal{I}\setminus\{i\})$
+            \ENDFOR
+            \STATE
+            \STATE \textbf{Step 4: Optimal decision}
+            \STATE $V(t, x, \mathbf{s}, \mathcal{I}) \leftarrow \max(V_{\text{cont}}, \max_{i\in\mathcal{I}} V_{\text{stop}}[i])$
+        \ENDFOR
+    \ENDFOR
+\ENDFOR
+\RETURN $V, \boldsymbol{\pi}^*, \text{stopping\_regions}$
+\end{algorithmic}
+\end{algorithm}
+
+\vspace{0.5cm} % Add some space before section 4
+
+\section{Implementation Details}
+
+\textbf{Key Python Libraries:}
+\begin{itemize}
+\item \texttt{numpy}: Array operations and linear algebra
+\item \texttt{scipy.optimize}: Constrained optimization for portfolio weights
+\item \texttt{scipy.interpolate}: Interpolation between grid points
+\item \texttt{numba}: JIT compilation for performance-critical loops
+\end{itemize}
+
+\textbf{Computational Optimizations:}
+\begin{enumerate}
+\item \textbf{Dimension Reduction}: Exploit symmetries when possible
+\item \textbf{Sparse Grids}: Adaptive mesh refinement near stopping boundaries
+\item \textbf{Parallel Processing}: Compute value function for different active sets in parallel
+\end{enumerate}
+
+\section{Output Analysis}
+
+The algorithm produces:
+\begin{itemize}
+\item \textbf{Stopping Regions}: $\mathcal{S}_i(t, \mathcal{I}) = \{(x, \mathbf{s}): \text{stop asset } i\}$
+\item \textbf{Optimal Portfolio Maps}: $\boldsymbol{\pi}^*(t, x, \mathbf{s}, \mathcal{I})$
+\item \textbf{Value Function}: $V(t, x, \mathbf{s}, \mathcal{I})$
+\end{itemize}
+
+\textbf{Convergence Criteria:}
+$\|V^{(k+1)} - V^{(k)}\|_\infty < \epsilon$ and policy stability $\|\boldsymbol{\pi}^{(k+1)} - \boldsymbol{\pi}^{(k)}\| < \delta$
+
+\end{document}
