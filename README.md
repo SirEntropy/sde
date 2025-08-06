@@ -209,13 +209,6 @@ The implementation includes built-in validation:
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 📞 Support
-
-For questions or issues:
-- Check the examples in `examples/`
-- Review the mathematical specification in `latex/`
-- Open an issue on GitHub
-
 ---
 
 **Note**: This implementation is for research and educational purposes. For production trading systems, additional considerations for numerical stability, market microstructure, and regulatory requirements may be necessary.
